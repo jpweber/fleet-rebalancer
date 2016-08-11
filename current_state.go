@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 20:02:35
+* @Last Modified time: 2016-08-10 20:12:52
  */
 
 package main
@@ -78,4 +78,13 @@ func machineCount(fleetUnits FleetStates) int {
 func countToReschedule(containers, machines, countOnMachine int) int {
 	reschedule := float64(countOnMachine) - math.Ceil(float64(containers)/float64(machines))
 	return int(reschedule)
+}
+
+func unitsToReschule(rescheduleCount int, fleetUnits FleetStates) []string {
+	var units []string
+
+	for i := 0; i < rescheduleCount; i++ {
+		units = append(units, fleetUnits.States[i].Name)
+	}
+	return units
 }
