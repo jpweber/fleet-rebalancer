@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:10:02
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 23:16:17
+* @Last Modified time: 2016-08-11 19:06:23
  */
 
 package main
@@ -39,7 +39,7 @@ func nameForNextInstance(unit string) string {
 }
 
 func getNextInstance(host string, appName string) int64 {
-	// TODO: update this to use the etcd library
+	// TODO: host needs to be etcd host create cli arg for that
 	url := "http://" + host + "/v2/keys/nextinstance/" + appName
 	var curInstance int64
 	var nextInstanceNum int64
@@ -164,23 +164,4 @@ func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) 
 	}
 
 	return up
-}
-
-func watchFleetState(host, appName, appVersion, instanceNumber string, c chan string, q chan bool) {
-	for {
-		select {
-		case <-q:
-			return
-		default:
-			fleetStateParams := map[string]string{"unitName": appName + "-" + appVersion + "@" + instanceNumber}
-			state := instanceStates(host, fleetStateParams)
-			if len(state.States) > 0 {
-				c <- state.States[0].SystemdSubState
-			}
-
-			// sleep for .25 seconds to not DoS our fleet api
-			time.Sleep(250 * time.Millisecond)
-		}
-
-	}
 }
