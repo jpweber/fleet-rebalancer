@@ -2,14 +2,13 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-11 19:20:20
+* @Last Modified time: 2016-08-11 19:54:13
  */
 
 package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 )
 
@@ -45,23 +44,38 @@ func main() {
 		log.Println("Units that are going to be destroyed", destroyingUnits)
 	}
 
-	// TODO: deploy unit
-	deployResults := deployUnits(deployInfo, unitFiles)
-	if deployResults == true {
-		// decrement total number of expected deployed containers
-		// *numContainers--
-
-		// if the container succesfully deployed destroy
-		// all old instances of this container
-		// loop over the oldInstances and send a destroy command
-		// for each one, run this as goroutines so they operate conncurrently
-		// for oldInstanceCount > 0 {
-		//  fmt.Println(oldInstanceCount)
-		//  go destroyInstance(oldInstances[oldInstanceCount-1], deployInfo)
-		//  oldInstanceCount--
-		// }
-	} else {
-		fmt.Println("Failed rescheduling container. Going on to next one")
+	unitFiles := UnitFiles{}
+	for _, unitName := range destroyingUnits {
+		unitFile := getUnitfile(unitName, *fleetHost)
+		file := File{
+			Name:     unitName,
+			Contents: unitFile,
+		}
+		unitFiles.File = append(unitFiles.File, file)
 	}
+
+	// TODO: see below
+	// find the instance number of each unit name
+	// then modify the instance number used in the PUT url
+	// and modify the instance number in the "name" value of the unit file
+
+	// TODO: deploy unit
+	// deployResults := deployUnits(deployInfo, unitFiles)
+	// if deployResults == true {
+	// 	// decrement total number of expected deployed containers
+	// 	// *numContainers--
+
+	// 	// if the container succesfully deployed destroy
+	// 	// all old instances of this container
+	// 	// loop over the oldInstances and send a destroy command
+	// 	// for each one, run this as goroutines so they operate conncurrently
+	// 	// for oldInstanceCount > 0 {
+	// 	//  fmt.Println(oldInstanceCount)
+	// 	//  go destroyInstance(oldInstances[oldInstanceCount-1], deployInfo)
+	// 	//  oldInstanceCount--
+	// 	// }
+	// } else {
+	// 	fmt.Println("Failed rescheduling container. Going on to next one")
+	// }
 
 }
