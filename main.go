@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 20:22:56
+* @Last Modified time: 2016-08-10 22:20:52
  */
 
 package main
@@ -30,15 +30,16 @@ func main() {
 	countOnMachine := containerCount(unitStates, *machineID)
 	reschedule := countToReschedule(unitCount, machines, countOnMachine)
 	movingUnits := unitsToReschule(reschedule, unitStates)
+	destroyingUnits := unitsToDestroy(reschedule, unitStates)
 	if *debug == true {
 		log.Println(unitCount, "Containers")
 		log.Println(machines, "Fleet Nodes")
 		log.Println(countOnMachine, "Containers on node we want to cleanup")
 		log.Println(reschedule, "Number of containers we are going to reschedule away from", *machineID)
 		log.Println("Units that are going to be moved", movingUnits)
+		log.Println("Units that are going to be destroyed", destroyingUnits)
 	}
 
-	// TODO: parse unit names to remove the instance numbers
 	// TODO: fetch new instance numbers from etcd
 	// TODO: deploy unit
 	// TODO: tear down old unit on new unit successful deployment

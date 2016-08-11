@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 20:12:52
+* @Last Modified time: 2016-08-10 22:10:08
  */
 
 package main
@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type FleetStates struct {
@@ -81,6 +82,16 @@ func countToReschedule(containers, machines, countOnMachine int) int {
 }
 
 func unitsToReschule(rescheduleCount int, fleetUnits FleetStates) []string {
+	var units []string
+
+	for i := 0; i < rescheduleCount; i++ {
+		nameParts := strings.Split(fleetUnits.States[i].Name, "@")
+		units = append(units, nameParts[0])
+	}
+	return units
+}
+
+func unitsToDestroy(rescheduleCount int, fleetUnits FleetStates) []string {
 	var units []string
 
 	for i := 0; i < rescheduleCount; i++ {
