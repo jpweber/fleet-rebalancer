@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 22:20:52
+* @Last Modified time: 2016-08-10 23:15:51
  */
 
 package main
@@ -24,7 +24,7 @@ func main() {
 
 	log.Println("Starting Fleet Rescheduling")
 
-	unitStates := instanceStates(*fleetHost)
+	unitStates := instanceStates(*fleetHost, nil)
 	unitCount := len(unitStates.States)
 	machines := machineCount(unitStates)
 	countOnMachine := containerCount(unitStates, *machineID)

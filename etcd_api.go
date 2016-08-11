@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:10:02
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 22:29:34
+* @Last Modified time: 2016-08-10 23:16:17
  */
 
 package main
@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/client"
-	"github.com/fatih/color"
 	"golang.org/x/net/context"
 )
 
@@ -35,13 +34,13 @@ func nameForNextInstance(unit string) string {
 		}
 	}
 
-	appName := strings.Join(nameParts[0:3], "-")
+	appName := strings.Join(nameParts[0:nameLimit], "-")
 	return appName
 }
 
 func getNextInstance(host string, appName string) int64 {
 	// TODO: update this to use the etcd library
-	url = "http://" + host + "/v2/keys/nextinstance/" + appName
+	url := "http://" + host + "/v2/keys/nextinstance/" + appName
 	var curInstance int64
 	var nextInstanceNum int64
 	response, err := http.Get(url)
@@ -62,7 +61,7 @@ func getNextInstance(host string, appName string) int64 {
 		if etcdResp["errorCode"] != nil {
 			fmt.Println("Instance number does not exist. Initializing new key")
 			// initialize instance key
-			setInstanceNumber(deployInfo, 10, 0)
+			setInstanceNumber(host, appName, 10, 0)
 			nextInstanceNum = 10
 		} else {
 			nodeResp := etcdResp["node"].(map[string]interface{})
@@ -74,7 +73,7 @@ func getNextInstance(host string, appName string) int64 {
 				// always reset to 10 if we are at 99 or greater because of a bug
 				nextInstanceNum = 10
 			}
-			setInstanceNumber(host, nextInstanceNum, curInstance)
+			setInstanceNumber(host, appName, nextInstanceNum, curInstance)
 		}
 
 	}
@@ -85,7 +84,7 @@ func getNextInstance(host string, appName string) int64 {
 func setInstanceNumber(host string, appName string, instanceNumber int64, prevValue int64) {
 	url := "http://" + host
 	cfg := client.Config{
-		Endpoints: []string{fleetURL + ":4001"},
+		Endpoints: []string{url + ":4001"},
 		Transport: client.DefaultTransport,
 		// set timeout per request to fail fast when the target endpoint is unavailable
 		HeaderTimeoutPerRequest: time.Second,
@@ -106,34 +105,9 @@ func setInstanceNumber(host string, appName string, instanceNumber int64, prevVa
 	}
 }
 
-func handleInstanceTimeout(deployInfo DeployInfo, instanceNumber string) {
-	// get instance state info from fleet before
-	// printing error and moving on
-	color.Red("Timeout waiting for container to be up")
-	fleetParams := map[string]string{"unitName": deployInfo.AppName + "-" + deployInfo.Version + "@" + instanceNumber}
-	fleetResp := getInstanceStates(deployInfo, fleetParams)
-	if len(fleetResp.States) > 0 {
-		fmt.Println("systemdActiveState:", fleetResp.States[0].SystemdActiveState)
-		fmt.Println("systemdLoadState:", fleetResp.States[0].SystemdLoadState)
-		fmt.Println("systemdSubState:", fleetResp.States[0].SystemdSubState)
-	} else {
-		instanceName := deployInfo.AppName + "-" + deployInfo.Version + "@" + instanceNumber
-		fmt.Println(instanceName, "Not in list of fleet units.")
-		resp := getInstanceStates(deployInfo, nil)
-		deployedUnits := filterInstances(resp, deployInfo)
-		numNodes := getNumberOfNodes(deployInfo)
-
-		if numNodes == len(deployedUnits) {
-			fmt.Println(numNodes, "Nodes in Cluster", len(deployedUnits), "Units deployed")
-			fmt.Println("at least one unit must be destroy first before we can deploy a new one")
-		}
-
-	}
-}
-
-func instanceUp(deployInfo DeployInfo, instanceNumber string, waitSecs int) bool {
+func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) bool {
 	var up bool
-	etcdURL := "http://coreos." + deployInfo.Environ + ".crosschx.com"
+	etcdURL := "http://" + host
 	cfg := client.Config{
 		Endpoints: []string{etcdURL + ":4001"},
 		Transport: client.DefaultTransport,
@@ -147,7 +121,7 @@ func instanceUp(deployInfo DeployInfo, instanceNumber string, waitSecs int) bool
 
 	kapi := client.NewKeysAPI(etcdClient)
 	watchOptions := client.WatcherOptions{0, false}
-	watcher := kapi.Watcher("/services/instances/"+deployInfo.AppName+"/"+deployInfo.Version+"@"+instanceNumber, &watchOptions)
+	watcher := kapi.Watcher("/services/instances/"+appName+"/"+appVersion+"@"+instanceNumber, &watchOptions)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(waitSecs)*time.Second)
 	defer cancel()
 	fmt.Println("Waiting", waitSecs, "seconds for container to be up")
@@ -155,7 +129,7 @@ func instanceUp(deployInfo DeployInfo, instanceNumber string, waitSecs int) bool
 	// start watching the fleet state of our unit / instance
 	stateChan := make(chan string)
 	quit := make(chan bool)
-	go watchFleetState(deployInfo, instanceNumber, stateChan, quit)
+	go watchFleetState(host, appName, appVersion, instanceNumber, stateChan, quit)
 	go func() {
 		for {
 			select {
@@ -179,7 +153,6 @@ func instanceUp(deployInfo DeployInfo, instanceNumber string, waitSecs int) bool
 		if err == context.Canceled {
 			// ctx is canceled by another routine
 		} else if err == context.DeadlineExceeded {
-			handleInstanceTimeout(deployInfo, instanceNumber)
 			up = false
 		} else {
 			// handle error
@@ -191,4 +164,23 @@ func instanceUp(deployInfo DeployInfo, instanceNumber string, waitSecs int) bool
 	}
 
 	return up
+}
+
+func watchFleetState(host, appName, appVersion, instanceNumber string, c chan string, q chan bool) {
+	for {
+		select {
+		case <-q:
+			return
+		default:
+			fleetStateParams := map[string]string{"unitName": appName + "-" + appVersion + "@" + instanceNumber}
+			state := instanceStates(host, fleetStateParams)
+			if len(state.States) > 0 {
+				c <- state.States[0].SystemdSubState
+			}
+
+			// sleep for .25 seconds to not DoS our fleet api
+			time.Sleep(250 * time.Millisecond)
+		}
+
+	}
 }

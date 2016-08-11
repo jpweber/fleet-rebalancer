@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 22:10:08
+* @Last Modified time: 2016-08-10 23:11:22
  */
 
 package main
@@ -31,8 +31,17 @@ type FleetStates struct {
 	CountainerCount int
 }
 
-func instanceStates(fleetHost string) FleetStates {
+func instanceStates(fleetHost string, params map[string]string) FleetStates {
 	url := "http://" + fleetHost + "/fleet/v1/state"
+	// loop through params to append to the url if they exist
+	if len(params) > 0 {
+		url = url + "?"
+		for key, value := range params {
+			// as of now we are only ever expecting a single k,v pair
+			// for parameters
+			url = url + key + "=" + value + ".service"
+		}
+	}
 	response, err := http.Get(url)
 	fleetStates := FleetStates{}
 
