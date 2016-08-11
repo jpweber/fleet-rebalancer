@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-10 20:13:22
+* @Last Modified time: 2016-08-10 20:22:56
  */
 
 package main
@@ -37,5 +37,10 @@ func main() {
 		log.Println(reschedule, "Number of containers we are going to reschedule away from", *machineID)
 		log.Println("Units that are going to be moved", movingUnits)
 	}
+
+	// TODO: parse unit names to remove the instance numbers
+	// TODO: fetch new instance numbers from etcd
+	// TODO: deploy unit
+	// TODO: tear down old unit on new unit successful deployment
 
 }
