@@ -2,104 +2,108 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:07:31
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-11 19:49:29
+* @Last Modified time: 2016-09-27 22:59:54
  */
 
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/fatih/color"
 )
 
-// func sendUnitFile(host, appName, instanceNumber string, unitFile UnitFiles) *http.Response {
+func sendUnitFile(host, appName, instanceNumber, unitFile string) *http.Response {
 
-// 	// using bytes buffer to concat string quickly
-// 	var url bytes.Buffer
-// 	url.WriteString("http://")
-// 	url.WriteString(host)
-// 	url.WriteString("/fleet/v1/units/")
-// 	url.WriteString(appName)
-// 	url.WriteString("@")
-// 	url.WriteString(instanceNumber)
-// 	url.WriteString(".service")
+	// using bytes buffer to concat string quickly
+	var url bytes.Buffer
+	url.WriteString("http://")
+	url.WriteString(host)
+	url.WriteString("/fleet/v1/units/")
+	url.WriteString(appName)
+	url.WriteString("@")
+	url.WriteString(instanceNumber)
+	url.WriteString(".service")
 
-// 	// TODO: @debug
-// 	fmt.Println(url.String())
-// 	req, err := http.NewRequest("PUT", url.String(), bytes.NewBuffer([]byte(unitFile.Contents)))
-// 	req.Header.Set("Content-Type", "application/json")
+	// TODO: @debug
+	fmt.Println(url.String())
+	req, err := http.NewRequest("PUT", url.String(), bytes.NewBuffer([]byte(unitFile)))
+	req.Header.Set("Content-Type", "application/json")
 
-// 	client := &http.Client{}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer resp.Body.Close()
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
 
-// 	if resp.StatusCode == 201 {
-// 		fmt.Println("Fleet accepted the unit file OK")
-// 	} else {
-// 		// if fleet returns a response code other than ok show the code and body
-// 		fmt.Println("response Status:", resp.Status)
-// 		body, _ := ioutil.ReadAll(resp.Body)
-// 		fmt.Println("response Body:", string(body))
-// 	}
+	if resp.StatusCode == 201 {
+		fmt.Println("Fleet accepted the unit file OK")
+	} else {
+		// if fleet returns a response code other than ok show the code and body
+		fmt.Println("response Status:", resp.Status)
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("response Body:", string(body))
+	}
 
-// 	return resp
+	return resp
 
-// }
+}
 
 // wrapper function for sending unit file and other housekeeping parts of that
-// func deployUnits(host, appName, appVersion string, unitFile UnitFiles) bool {
-// 	// get the next instance number to use for deployment
-// 	// this function will also handling initializing the instance number
-// 	// if one does not exist
+func deployUnits(host, appName, appVersion, unitFile string) bool {
+	// get the next instance number to use for deployment
+	// this function will also handling initializing the instance number
+	// if one does not exist
 
-// 	fmt.Println("getting instance number for non global unit")
-// 	nextInstNum := getNextInstance(host, appName)
+	fmt.Println("getting instance number for non global unit")
+	nextInstNum := getNextInstance(host, appName)
 
-// 	// init what we are going to return
-// 	var status bool
+	// init what we are going to return
+	var status bool
 
-// 	// deploy new unit.
-// 	sendTries := 5
-// 	for sendTries != 0 {
-// 		sendUnitResponse := sendUnitFile(host, appName, fmt.Sprintf("%d", nextInstNum), unitFile)
-// 		if sendUnitResponse.StatusCode != 201 {
-// 			// special catch for 204 errors.
-// 			if sendUnitResponse.StatusCode == 204 {
-// 				color.Red("Received 204 - Duplicate unit file submitted to fleet. This usually a sign multiple unit files for this version. Contact DevOPs")
-// 			} else {
-// 				color.Red("Error communicating with fleet trying again")
-// 			}
-// 			sendTries--
-// 			if sendTries == 0 {
-// 				color.Red("Deployment Failed")
-// 			}
-// 			time.Sleep(1 * time.Second)
-// 		} else {
-// 			// we succeeded now break out of this loop
-// 			sendTries = 0
-// 		}
-// 	}
+	// deploy new unit.
+	sendTries := 5
+	for sendTries != 0 {
+		sendUnitResponse := sendUnitFile(host, appName+"-"+appVersion, fmt.Sprintf("%d", nextInstNum), unitFile)
+		if sendUnitResponse.StatusCode != 201 {
+			// special catch for 204 errors.
+			if sendUnitResponse.StatusCode == 204 {
+				color.Red("Received 204 - Duplicate unit file submitted to fleet. This usually a sign multiple unit files for this version. Contact DevOPs")
+			} else {
+				color.Red("Error communicating with fleet trying again")
+			}
+			sendTries--
+			if sendTries == 0 {
+				color.Red("Deployment Failed")
+			}
+			time.Sleep(1 * time.Second)
+		} else {
+			// we succeeded now break out of this loop
+			sendTries = 0
+		}
+	}
 
-// 	// now wait for the container to be up
-// 	// only for the main unit types. Not watching for presence yet
-// 	success := instanceUp(host, appName, appVersion, fmt.Sprintf("%d", nextInstNum), 600)
-// 	if success == true {
-// 		status = true
-// 		color.Green("Deployment Successful")
-// 	} else {
-// 		status = false
-// 	}
+	// now wait for the container to be up
+	// only for the main unit types. Not watching for presence yet
+	success := instanceUp(host, appName, appVersion, fmt.Sprintf("%d", nextInstNum), 600)
+	if success == true {
+		status = true
+		color.Green("Deployment Successful")
+	} else {
+		status = false
+	}
 
-// 	// default to false but we should never really hit this
-// 	return status
+	// default to false but we should never really hit this
+	return status
 
-// }
+}
 
 // func destroyInstance(oldInstance string, deployInfo DeployInfo) {
 // 	// first we need to set it to inactive when we can destroy it
@@ -162,6 +166,8 @@ func getUnitfile(unitName, fleetHost string) string {
 
 	response, err := http.Get(url)
 	var contents []byte
+	var dat map[string]interface{}
+
 	if err != nil {
 		fmt.Printf("%s", err)
 	} else {
@@ -172,7 +178,18 @@ func getUnitfile(unitName, fleetHost string) string {
 			os.Exit(1)
 		}
 
+		if err := json.Unmarshal(contents, &dat); err != nil {
+			panic(err)
+		}
+
+		// cleanupt our returned values to be what we really want
+		delete(dat, "currentState")
+		delete(dat, "machineID")
+		delete(dat, "name")
+
 	}
 
-	return string(contents)
+	returnUnit, _ := json.Marshal(dat)
+	return string(returnUnit)
+
 }

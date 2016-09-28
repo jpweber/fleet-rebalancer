@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:10:02
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-11 19:06:23
+* @Last Modified time: 2016-09-27 22:32:27
  */
 
 package main
@@ -29,7 +29,7 @@ func nameForNextInstance(unit string) string {
 	nameLimit := 0
 	for idx, part := range nameParts {
 		if rx.MatchString(part) == true {
-			nameLimit = idx - 1
+			nameLimit = idx
 			break
 		}
 	}
@@ -38,9 +38,26 @@ func nameForNextInstance(unit string) string {
 	return appName
 }
 
+func getAppVersionNumber(unit string) string {
+	rx := regexp.MustCompile("[0-9]+")
+
+	nameParts := strings.Split(unit, "-")
+	nameLimit := 0
+	for idx, part := range nameParts {
+		if rx.MatchString(part) == true {
+			nameLimit = idx
+			break
+		}
+	}
+
+	appVersion := nameParts[nameLimit]
+	return appVersion
+}
+
 func getNextInstance(host string, appName string) int64 {
 	// TODO: host needs to be etcd host create cli arg for that
-	url := "http://" + host + "/v2/keys/nextinstance/" + appName
+	// url := "http://" + host + "/v2/keys/nextinstance/" + appName
+	url := "http://coreos.dev.crosschx.com:4001/v2/keys/nextinstance/" + appName // temp
 	var curInstance int64
 	var nextInstanceNum int64
 	response, err := http.Get(url)
@@ -82,7 +99,8 @@ func getNextInstance(host string, appName string) int64 {
 }
 
 func setInstanceNumber(host string, appName string, instanceNumber int64, prevValue int64) {
-	url := "http://" + host
+	// url := "http://" + host
+	url := "http://coreos.dev.crosschx.com" //temp
 	cfg := client.Config{
 		Endpoints: []string{url + ":4001"},
 		Transport: client.DefaultTransport,
@@ -140,9 +158,10 @@ func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) 
 					quit <- true
 					cancel()
 					return
-				} else {
-					log.Println("Unit State", state)
 				}
+
+				log.Println("Unit State", state)
+
 			}
 
 		}
