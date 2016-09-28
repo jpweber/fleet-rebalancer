@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:10:02
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-27 22:32:27
+* @Last Modified time: 2016-09-27 23:18:50
  */
 
 package main
@@ -125,7 +125,8 @@ func setInstanceNumber(host string, appName string, instanceNumber int64, prevVa
 
 func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) bool {
 	var up bool
-	etcdURL := "http://" + host
+	// etcdURL := "http://" + host
+	etcdURL := "http://coreos.dev.crosschx.com" //temp
 	cfg := client.Config{
 		Endpoints: []string{etcdURL + ":4001"},
 		Transport: client.DefaultTransport,

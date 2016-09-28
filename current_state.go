@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-11 09:59:03
+* @Last Modified time: 2016-09-27 23:48:54
  */
 
 package main
@@ -90,21 +90,38 @@ func countToReschedule(containers, machines, countOnMachine int) int {
 	return int(reschedule)
 }
 
-func unitsToReschule(rescheduleCount int, fleetUnits FleetStates) []string {
+func unitsToReschule(rescheduleCount int, fleetUnits FleetStates, machineID string) []string {
 	var units []string
 
-	for i := 0; i < rescheduleCount; i++ {
-		nameParts := strings.Split(fleetUnits.States[i].Name, "@")
-		units = append(units, nameParts[0])
+	idx := 0
+	for _, fleetUnit := range fleetUnits.States {
+		if fleetUnit.MachineID == machineID {
+			idx++
+			nameParts := strings.Split(fleetUnit.Name, "@")
+			units = append(units, nameParts[0])
+			if idx == rescheduleCount {
+				break
+			}
+		}
 	}
+
 	return units
 }
 
-func unitsToDestroy(rescheduleCount int, fleetUnits FleetStates) []string {
+func unitsToDestroy(rescheduleCount int, fleetUnits FleetStates, machineID string) []string {
 	var units []string
-
-	for i := 0; i < rescheduleCount; i++ {
-		units = append(units, fleetUnits.States[i].Name)
+	idx := 0
+	for _, fleetUnit := range fleetUnits.States {
+		if fleetUnit.MachineID == machineID {
+			idx++
+			units = append(units, fleetUnit.Name)
+			if idx == rescheduleCount {
+				break
+			}
+		}
 	}
+	// for i := 0; i < rescheduleCount; i++ {
+	// 	units = append(units, fleetUnits.States[i].Name)
+	// }
 	return units
 }

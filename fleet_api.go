@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:07:31
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-27 22:59:54
+* @Last Modified time: 2016-09-27 23:12:46
  */
 
 package main
@@ -105,42 +105,44 @@ func deployUnits(host, appName, appVersion, unitFile string) bool {
 
 }
 
-// func destroyInstance(oldInstance string, deployInfo DeployInfo) {
-// 	// first we need to set it to inactive when we can destroy it
-// 	// this is because of a bug in fleet with systemd not executing
-// 	// execstoppost actions https://github.com/coreos/fleet/issues/1000
-// 	url := "http://coreos." + deployInfo.Environ + ".crosschx.com:49153/fleet/v1/units/" + oldInstance
-// 	// stop
-// 	fmt.Println("Stopping", oldInstance)
-// 	stopState := `{"desiredState": "inactive"}`
-// 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer([]byte(stopState)))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	client := &http.Client{}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer resp.Body.Close()
+func destroyInstance(oldInstance string) {
+	// first we need to set it to inactive when we can destroy it
+	// this is because of a bug in fleet with systemd not executing
+	// execstoppost actions https://github.com/coreos/fleet/issues/1000
+	// url := "http://coreos." + deployInfo.Environ + ".crosschx.com:49153/fleet/v1/units/" + oldInstance
+	// temporary hard coded for now
+	url := "http://coreos.dev.crosschx.com:49153/fleet/v1/units/" + oldInstance
+	// stop
+	fmt.Println("Stopping", oldInstance)
+	stopState := `{"desiredState": "inactive"}`
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer([]byte(stopState)))
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
 
-// 	fmt.Println("response Status:", resp.Status)
-// 	// fmt.Println("response Headers:", resp.Header)
+	fmt.Println("response Status:", resp.Status)
+	// fmt.Println("response Headers:", resp.Header)
 
-// 	// destroy
-// 	fmt.Println("Destroying", oldInstance)
-// 	req, err = http.NewRequest("DELETE", url, nil)
-// 	req.Header.Set("Content-Type", "application/json")
+	// destroy
+	fmt.Println("Destroying", oldInstance)
+	req, err = http.NewRequest("DELETE", url, nil)
+	req.Header.Set("Content-Type", "application/json")
 
-// 	client = &http.Client{}
-// 	resp, err = client.Do(req)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer resp.Body.Close()
+	client = &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
 
-// 	if resp.StatusCode == 204 {
-// 		fmt.Println(oldInstance, "Destroyed")
-// 	}
-// }
+	if resp.StatusCode == 204 {
+		fmt.Println(oldInstance, "Destroyed")
+	}
+}
 
 func watchFleetState(host, appName, appVersion, instanceNumber string, c chan string, q chan bool) {
 	for {

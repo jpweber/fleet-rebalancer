@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-27 22:57:10
+* @Last Modified time: 2016-09-27 23:47:30
  */
 
 package main
@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -26,6 +27,7 @@ func main() {
 	fleetHost := flag.String("f", "", "Fleet host to send commands to <hostname>:<port>")
 	machineID := flag.String("m", "", "Machine ID to reschedule away from")
 	debug := flag.Bool("v", false, "verbose output")
+	dryRun := flag.Bool("d", false, "Dry Run. Don't make any changes just show what would happen")
 	flag.Parse()
 
 	log.Println("Starting Fleet Rescheduling")
@@ -36,8 +38,11 @@ func main() {
 	countOnMachine := containerCount(unitStates, *machineID)
 	reschedule := countToReschedule(unitCount, machines, countOnMachine)
 	// use the values in this list to get the next instance numbers
-	movingUnits := unitsToReschule(reschedule, unitStates)
-	destroyingUnits := unitsToDestroy(reschedule, unitStates)
+	movingUnits := unitsToReschule(reschedule, unitStates, *machineID)
+	destroyingUnits := unitsToDestroy(reschedule, unitStates, *machineID)
+	if *dryRun == true {
+		*debug = true
+	}
 	if *debug == true {
 		log.Println(unitCount, "Containers")
 		log.Println(machines, "Fleet Nodes")
@@ -45,6 +50,9 @@ func main() {
 		log.Println(reschedule, "Number of containers we are going to reschedule away from", *machineID)
 		log.Println("Units that are going to be moved", movingUnits)
 		log.Println("Units that are going to be destroyed", destroyingUnits)
+	}
+	if *dryRun == true {
+		os.Exit(0)
 	}
 
 	unitFiles := UnitFiles{}
@@ -91,18 +99,15 @@ func main() {
 	for _, deployData := range appDeployData {
 		deployResults := deployUnits(*fleetHost, deployData.AppName, deployData.Version, deployData.UnitFile)
 		if deployResults == true {
-			// decrement total number of expected deployed containers
-			// *numContainers--
 
 			// if the container succesfully deployed destroy
 			// all old instances of this container
-			// loop over the oldInstances and send a destroy command
-			// for each one, run this as goroutines so they operate conncurrently
-			// for oldInstanceCount > 0 {
-			//  fmt.Println(oldInstanceCount)
-			//  go destroyInstance(oldInstances[oldInstanceCount-1], deployInfo)
-			//  oldInstanceCount--
-			// }
+
+			for _, killUnit := range destroyingUnits {
+				if strings.Contains(killUnit, deployData.AppName) {
+					destroyInstance(killUnit)
+				}
+			}
 		} else {
 			fmt.Println("Failed rescheduling container. Going on to next one")
 		}
