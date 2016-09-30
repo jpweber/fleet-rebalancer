@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/coreos/etcd/client"
@@ -23,34 +22,24 @@ import (
 )
 
 func nameForNextInstance(unit string) string {
-	rx := regexp.MustCompile("[0-9]+")
+	rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
 
-	nameParts := strings.Split(unit, "-")
-	nameLimit := 0
-	for idx, part := range nameParts {
-		if rx.MatchString(part) == true {
-			nameLimit = idx
-			break
-		}
-	}
+	log.Println(unit)
+	nameParts := rx.FindStringSubmatch(unit)
 
-	appName := strings.Join(nameParts[0:nameLimit], "-")
+	appName := nameParts[1]
 	return appName
 }
 
 func getAppVersionNumber(unit string) string {
-	rx := regexp.MustCompile("[0-9]+")
+	
+	rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
+	// containerData := make(map[string]string)
 
-	nameParts := strings.Split(unit, "-")
-	nameLimit := 0
-	for idx, part := range nameParts {
-		if rx.MatchString(part) == true {
-			nameLimit = idx
-			break
-		}
-	}
+	log.Println(unit)
+	nameParts := rx.FindStringSubmatch(unit)
 
-	appVersion := nameParts[nameLimit]
+	appVersion := nameParts[2]
 	return appVersion
 }
 

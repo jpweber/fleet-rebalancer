@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-27 23:48:54
+* @Last Modified time: 2016-09-30 00:47:53
  */
 
 package main
@@ -92,7 +92,9 @@ func countToReschedule(containers, machines, countOnMachine int) int {
 
 func unitsToReschule(rescheduleCount int, fleetUnits FleetStates, machineID string) []string {
 	var units []string
-
+	if rescheduleCount == 0 {
+		return units
+	}
 	idx := 0
 	for _, fleetUnit := range fleetUnits.States {
 		if fleetUnit.MachineID == machineID {
@@ -110,6 +112,9 @@ func unitsToReschule(rescheduleCount int, fleetUnits FleetStates, machineID stri
 
 func unitsToDestroy(rescheduleCount int, fleetUnits FleetStates, machineID string) []string {
 	var units []string
+	if rescheduleCount == 0 {
+		return units
+	}
 	idx := 0
 	for _, fleetUnit := range fleetUnits.States {
 		if fleetUnit.MachineID == machineID {

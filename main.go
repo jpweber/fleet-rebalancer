@@ -2,8 +2,10 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-27 23:47:30
+* @Last Modified time: 2016-09-30 00:48:30
  */
+
+// TODO: Automatically find the node with the most containers
 
 package main
 
@@ -30,6 +32,11 @@ func main() {
 	dryRun := flag.Bool("d", false, "Dry Run. Don't make any changes just show what would happen")
 	flag.Parse()
 
+	// if we are in try dry run mode automatically enable debug mode
+	if *dryRun == true {
+		*debug = true
+	}
+
 	log.Println("Starting Fleet Rescheduling")
 
 	unitStates := instanceStates(*fleetHost, nil)
@@ -37,12 +44,9 @@ func main() {
 	machines := machineCount(unitStates)
 	countOnMachine := containerCount(unitStates, *machineID)
 	reschedule := countToReschedule(unitCount, machines, countOnMachine)
-	// use the values in this list to get the next instance numbers
 	movingUnits := unitsToReschule(reschedule, unitStates, *machineID)
 	destroyingUnits := unitsToDestroy(reschedule, unitStates, *machineID)
-	if *dryRun == true {
-		*debug = true
-	}
+
 	if *debug == true {
 		log.Println(unitCount, "Containers")
 		log.Println(machines, "Fleet Nodes")
@@ -51,7 +55,8 @@ func main() {
 		log.Println("Units that are going to be moved", movingUnits)
 		log.Println("Units that are going to be destroyed", destroyingUnits)
 	}
-	if *dryRun == true {
+	// early exit conditionals
+	if *dryRun == true || reschedule == 0 {
 		os.Exit(0)
 	}
 
