@@ -26,7 +26,7 @@ type DeployInfo struct {
 
 func main() {
 
-	fleetHost := flag.String("f", "", "Fleet host to send commands to <hostname>:<port>")
+	fleetHost := flag.String("f", "", "Fleet host")
 	machineID := flag.String("m", "", "Machine ID to reschedule away from")
 	debug := flag.Bool("v", false, "verbose output")
 	dryRun := flag.Bool("d", false, "Dry Run. Don't make any changes just show what would happen")
@@ -110,7 +110,7 @@ func main() {
 
 			for _, killUnit := range destroyingUnits {
 				if strings.Contains(killUnit, deployData.AppName) {
-					destroyInstance(killUnit)
+					destroyInstance(killUnit, *fleetHost)
 				}
 			}
 		} else {

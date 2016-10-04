@@ -32,7 +32,7 @@ func nameForNextInstance(unit string) string {
 }
 
 func getAppVersionNumber(unit string) string {
-	
+
 	rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
 	// containerData := make(map[string]string)
 
@@ -45,8 +45,10 @@ func getAppVersionNumber(unit string) string {
 
 func getNextInstance(host string, appName string) int64 {
 	// TODO: host needs to be etcd host create cli arg for that
-	// url := "http://" + host + "/v2/keys/nextinstance/" + appName
-	url := "http://coreos.dev.crosschx.com:4001/v2/keys/nextinstance/" + appName // temp
+	hostParts := strings.Split(host, ":")
+	host = hostParts[0]
+	url := "http://" + host + ":4001/v2/keys/nextinstance/" + appName
+	// url := "http://coreos.dev.crosschx.com:4001/v2/keys/nextinstance/" + appName // temp
 	var curInstance int64
 	var nextInstanceNum int64
 	response, err := http.Get(url)
@@ -88,8 +90,10 @@ func getNextInstance(host string, appName string) int64 {
 }
 
 func setInstanceNumber(host string, appName string, instanceNumber int64, prevValue int64) {
-	// url := "http://" + host
-	url := "http://coreos.dev.crosschx.com" //temp
+	hostParts := strings.Split(host, ":")
+	host = hostParts[0]
+	url := "http://" + host
+
 	cfg := client.Config{
 		Endpoints: []string{url + ":4001"},
 		Transport: client.DefaultTransport,
@@ -114,8 +118,9 @@ func setInstanceNumber(host string, appName string, instanceNumber int64, prevVa
 
 func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) bool {
 	var up bool
-	// etcdURL := "http://" + host
-	etcdURL := "http://coreos.dev.crosschx.com" //temp
+	hostParts := strings.Split(host, ":")
+	host = hostParts[0]
+	etcdURL := "http://" + host
 	cfg := client.Config{
 		Endpoints: []string{etcdURL + ":4001"},
 		Transport: client.DefaultTransport,
