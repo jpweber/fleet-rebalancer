@@ -57,13 +57,13 @@ func sendUnitFile(host, appName, instanceNumber, unitFile string) *http.Response
 }
 
 // wrapper function for sending unit file and other housekeeping parts of that
-func deployUnits(host, appName, appVersion, unitFile string) bool {
+func deployUnits(hosts Hosts, appName, appVersion, unitFile string) bool {
 	// get the next instance number to use for deployment
 	// this function will also handling initializing the instance number
 	// if one does not exist
 
 	fmt.Println("getting instance number for non global unit")
-	nextInstNum := getNextInstance(host, appName)
+	nextInstNum := getNextInstance(hosts.etcd, appName)
 
 	// init what we are going to return
 	var status bool
@@ -71,7 +71,7 @@ func deployUnits(host, appName, appVersion, unitFile string) bool {
 	// deploy new unit.
 	sendTries := 5
 	for sendTries != 0 {
-		sendUnitResponse := sendUnitFile(host, appName+"-"+appVersion, fmt.Sprintf("%d", nextInstNum), unitFile)
+		sendUnitResponse := sendUnitFile(hosts.fleet, appName+"-"+appVersion, fmt.Sprintf("%d", nextInstNum), unitFile)
 		if sendUnitResponse.StatusCode != 201 {
 			// special catch for 204 errors.
 			if sendUnitResponse.StatusCode == 204 {
@@ -92,7 +92,7 @@ func deployUnits(host, appName, appVersion, unitFile string) bool {
 
 	// now wait for the container to be up
 	// only for the main unit types. Not watching for presence yet
-	success := instanceUp(host, appName, appVersion, fmt.Sprintf("%d", nextInstNum), 600)
+	success := instanceUp(hosts, appName, appVersion, fmt.Sprintf("%d", nextInstNum), 600)
 	if success == true {
 		status = true
 		color.Green("Deployment Successful")
@@ -105,13 +105,13 @@ func deployUnits(host, appName, appVersion, unitFile string) bool {
 
 }
 
-func destroyInstance(oldInstance, host, string) {
+func destroyInstance(oldInstance string, hosts Hosts) {
 	// first we need to set it to inactive when we can destroy it
 	// this is because of a bug in fleet with systemd not executing
 	// execstoppost actions https://github.com/coreos/fleet/issues/1000
 	// url := "http://coreos." + deployInfo.Environ + ".crosschx.com:49153/fleet/v1/units/" + oldInstance
 	// temporary hard coded for now
-	url := "http://" + host + "/fleet/v1/units/" + oldInstance
+	url := "http://" + hosts.fleet + "/fleet/v1/units/" + oldInstance
 	// stop
 	fmt.Println("Stopping", oldInstance)
 	stopState := `{"desiredState": "inactive"}`
@@ -144,14 +144,14 @@ func destroyInstance(oldInstance, host, string) {
 	}
 }
 
-func watchFleetState(host, appName, appVersion, instanceNumber string, c chan string, q chan bool) {
+func watchFleetState(hosts Hosts, appName, appVersion, instanceNumber string, c chan string, q chan bool) {
 	for {
 		select {
 		case <-q:
 			return
 		default:
 			fleetStateParams := map[string]string{"unitName": appName + "-" + appVersion + "@" + instanceNumber}
-			state := instanceStates(host, fleetStateParams)
+			state := instanceStates(hosts, fleetStateParams)
 			if len(state.States) > 0 {
 				c <- state.States[0].SystemdSubState
 			}
@@ -163,8 +163,8 @@ func watchFleetState(host, appName, appVersion, instanceNumber string, c chan st
 	}
 }
 
-func getUnitfile(unitName, fleetHost string) string {
-	url := "http://" + fleetHost + "/fleet/v1/units/" + unitName
+func getUnitfile(unitName string, hosts Hosts) string {
+	url := "http://" + hosts.fleet + "/fleet/v1/units/" + unitName
 
 	response, err := http.Get(url)
 	var contents []byte

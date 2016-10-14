@@ -24,13 +24,25 @@ type DeployInfo struct {
 	UnitFile string
 }
 
+type Hosts struct {
+	fleet string
+	etcd  string
+}
+
 func main() {
 
-	fleetHost := flag.String("f", "", "Fleet host")
+	fleetHost := flag.String("f", "", "Fleet Host")
+	etcdHost := flag.String("e", "", "Etcd Host")
 	machineID := flag.String("m", "", "Machine ID to reschedule away from")
 	debug := flag.Bool("v", false, "verbose output")
 	dryRun := flag.Bool("d", false, "Dry Run. Don't make any changes just show what would happen")
 	flag.Parse()
+
+	// define our hosts in the host struct
+	hosts := Hosts{
+		fleet: *fleetHost,
+		etcd:  *etcdHost,
+	}
 
 	// if we are in try dry run mode automatically enable debug mode
 	if *dryRun == true {
@@ -39,7 +51,7 @@ func main() {
 
 	log.Println("Starting Fleet Rescheduling")
 
-	unitStates := instanceStates(*fleetHost, nil)
+	unitStates := instanceStates(hosts, nil)
 	unitCount := len(unitStates.States)
 	machines := machineCount(unitStates)
 	countOnMachine := containerCount(unitStates, *machineID)
@@ -62,7 +74,7 @@ func main() {
 
 	unitFiles := UnitFiles{}
 	for _, unitName := range destroyingUnits {
-		unitFile := getUnitfile(unitName, *fleetHost)
+		unitFile := getUnitfile(unitName, hosts)
 		file := File{
 			Name:     unitName,
 			Contents: unitFile,
@@ -102,7 +114,7 @@ func main() {
 	// TODO: deploy unit
 	// deployUnits(host, appName, appVersion, unitFile string) bool {
 	for _, deployData := range appDeployData {
-		deployResults := deployUnits(*fleetHost, deployData.AppName, deployData.Version, deployData.UnitFile)
+		deployResults := deployUnits(hosts, deployData.AppName, deployData.Version, deployData.UnitFile)
 		if deployResults == true {
 
 			// if the container succesfully deployed destroy
@@ -110,7 +122,7 @@ func main() {
 
 			for _, killUnit := range destroyingUnits {
 				if strings.Contains(killUnit, deployData.AppName) {
-					destroyInstance(killUnit, *fleetHost)
+					destroyInstance(killUnit, hosts)
 				}
 			}
 		} else {

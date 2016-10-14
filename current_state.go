@@ -31,8 +31,8 @@ type FleetStates struct {
 	CountainerCount int
 }
 
-func instanceStates(fleetHost string, params map[string]string) FleetStates {
-	url := "http://" + fleetHost + "/fleet/v1/state"
+func instanceStates(hosts Hosts, params map[string]string) FleetStates {
+	url := "http://" + hosts.fleet + "/fleet/v1/state"
 	// loop through params to append to the url if they exist
 	if len(params) > 0 {
 		url = url + "?"

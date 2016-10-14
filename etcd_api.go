@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coreos/etcd/client"
@@ -24,9 +25,12 @@ import (
 func nameForNextInstance(unit string) string {
 	rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
 
-	log.Println(unit)
+	// log.Println(unit)
+	if strings.Contains(unit, "presence") {
+		return unit
+	}
 	nameParts := rx.FindStringSubmatch(unit)
-
+	log.Println(nameParts)
 	appName := nameParts[1]
 	return appName
 }
@@ -36,7 +40,10 @@ func getAppVersionNumber(unit string) string {
 	rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
 	// containerData := make(map[string]string)
 
-	log.Println(unit)
+	// log.Println(unit)
+	if strings.Contains(unit, "presence") {
+		return unit
+	}
 	nameParts := rx.FindStringSubmatch(unit)
 
 	appVersion := nameParts[2]
@@ -45,8 +52,8 @@ func getAppVersionNumber(unit string) string {
 
 func getNextInstance(host string, appName string) int64 {
 	// TODO: host needs to be etcd host create cli arg for that
-	hostParts := strings.Split(host, ":")
-	host = hostParts[0]
+	// hostParts := strings.Split(host, ":")
+	// host = hostParts[0]
 	url := "http://" + host + ":4001/v2/keys/nextinstance/" + appName
 	// url := "http://coreos.dev.crosschx.com:4001/v2/keys/nextinstance/" + appName // temp
 	var curInstance int64
@@ -54,6 +61,7 @@ func getNextInstance(host string, appName string) int64 {
 	response, err := http.Get(url)
 	if err != nil {
 		fmt.Printf("%s", err)
+
 	} else {
 		defer response.Body.Close()
 		contents, err := ioutil.ReadAll(response.Body)
@@ -116,11 +124,10 @@ func setInstanceNumber(host string, appName string, instanceNumber int64, prevVa
 	}
 }
 
-func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) bool {
+func instanceUp(hosts Hosts, appName, appVersion, instanceNumber string, waitSecs int) bool {
 	var up bool
-	hostParts := strings.Split(host, ":")
-	host = hostParts[0]
-	etcdURL := "http://" + host
+
+	etcdURL := "http://" + hosts.etcd
 	cfg := client.Config{
 		Endpoints: []string{etcdURL + ":4001"},
 		Transport: client.DefaultTransport,
@@ -142,7 +149,7 @@ func instanceUp(host, appName, appVersion, instanceNumber string, waitSecs int) 
 	// start watching the fleet state of our unit / instance
 	stateChan := make(chan string)
 	quit := make(chan bool)
-	go watchFleetState(host, appName, appVersion, instanceNumber, stateChan, quit)
+	go watchFleetState(hosts, appName, appVersion, instanceNumber, stateChan, quit)
 	go func() {
 		for {
 			select {
