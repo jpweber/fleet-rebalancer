@@ -31,8 +31,13 @@ func nameForNextInstance(unit string) string {
 	}
 	nameParts := rx.FindStringSubmatch(unit)
 	log.Println(nameParts)
-	appName := nameParts[1]
-	return appName
+        if len(nameParts) > 0 {
+	    appName := nameParts[1]
+	    return appName
+        }
+
+        // this is the failure return
+        return unit
 }
 
 func getAppVersionNumber(unit string) string {
@@ -45,9 +50,13 @@ func getAppVersionNumber(unit string) string {
 		return unit
 	}
 	nameParts := rx.FindStringSubmatch(unit)
+        if len(nameParts) > 0 {
+	    appVersion := nameParts[2]
+            return appVersion
+        }
 
-	appVersion := nameParts[2]
-	return appVersion
+        // this is the failure return
+	return unit 
 }
 
 func getNextInstance(host string, appName string) int64 {
@@ -55,7 +64,6 @@ func getNextInstance(host string, appName string) int64 {
 	// hostParts := strings.Split(host, ":")
 	// host = hostParts[0]
 	url := "http://" + host + ":4001/v2/keys/nextinstance/" + appName
-	// url := "http://coreos.dev.crosschx.com:4001/v2/keys/nextinstance/" + appName // temp
 	var curInstance int64
 	var nextInstanceNum int64
 	response, err := http.Get(url)

@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-30 00:47:53
+* @Last Modified time: 2016-10-20 17:24:49
  */
 
 package main
@@ -14,9 +14,11 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 )
 
+// FleetStates struct to hold fleet state information
 type FleetStates struct {
 	States []struct {
 		SystemdActiveState string `json:"systemdActiveState"`
@@ -65,6 +67,27 @@ func instanceStates(hosts Hosts, params map[string]string) FleetStates {
 
 }
 
+func mostContainers(fleetUnits FleetStates) string {
+
+	hostContainerCount := make(map[string]int)
+	// count containers per machine
+	for _, fleetUnit := range fleetUnits.States {
+		hostContainerCount[fleetUnit.MachineID]++
+	}
+
+	// find the machines with the highest value
+	highCount := 0
+	highHost := ""
+	for k, v := range hostContainerCount {
+		if v > highCount {
+			highCount = v
+			highHost = k
+		}
+	}
+
+	return highHost
+}
+
 func containerCount(fleetUnits FleetStates, machineID string) int {
 	containerCount := 0
 	for _, fleetUnit := range fleetUnits.States {
@@ -86,7 +109,7 @@ func machineCount(fleetUnits FleetStates) int {
 }
 
 func countToReschedule(containers, machines, countOnMachine int) int {
-	reschedule := float64(countOnMachine) - math.Ceil(float64(containers)/float64(machines))
+	reschedule := math.Ceil(float64(countOnMachine) - float64(containers-machines)/float64(machines))
 	return int(reschedule)
 }
 
@@ -97,6 +120,17 @@ func unitsToReschule(rescheduleCount int, fleetUnits FleetStates, machineID stri
 	}
 	idx := 0
 	for _, fleetUnit := range fleetUnits.States {
+		// skip global units
+		if !strings.Contains(fleetUnit.Name, "@") {
+			continue
+		}
+
+		// skip units without a version
+		rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
+		if !rx.MatchString(fleetUnit.Name) {
+			continue
+		}
+
 		if fleetUnit.MachineID == machineID {
 			idx++
 			nameParts := strings.Split(fleetUnit.Name, "@")
@@ -117,6 +151,16 @@ func unitsToDestroy(rescheduleCount int, fleetUnits FleetStates, machineID strin
 	}
 	idx := 0
 	for _, fleetUnit := range fleetUnits.States {
+		// skip global units
+		if !strings.Contains(fleetUnit.Name, "@") {
+			continue
+		}
+
+		// skip units without a version
+		rx := regexp.MustCompile("(.*)-([0-9.]+(-SNAPSHOT)?)")
+		if !rx.MatchString(fleetUnit.Name) {
+			continue
+		}
 		if fleetUnit.MachineID == machineID {
 			idx++
 			units = append(units, fleetUnit.Name)

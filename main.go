@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-08-10 17:43:45
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-09-30 00:48:30
+* @Last Modified time: 2016-10-20 18:00:01
  */
 
 // TODO: Automatically find the node with the most containers
@@ -24,6 +24,7 @@ type DeployInfo struct {
 	UnitFile string
 }
 
+// Hosts hold host info
 type Hosts struct {
 	fleet string
 	etcd  string
@@ -33,7 +34,7 @@ func main() {
 
 	fleetHost := flag.String("f", "", "Fleet Host")
 	etcdHost := flag.String("e", "", "Etcd Host")
-	machineID := flag.String("m", "", "Machine ID to reschedule away from")
+	// machineID := flag.String("m", "", "Machine ID to reschedule away from")
 	debug := flag.Bool("v", false, "verbose output")
 	dryRun := flag.Bool("d", false, "Dry Run. Don't make any changes just show what would happen")
 	flag.Parse()
@@ -54,16 +55,18 @@ func main() {
 	unitStates := instanceStates(hosts, nil)
 	unitCount := len(unitStates.States)
 	machines := machineCount(unitStates)
-	countOnMachine := containerCount(unitStates, *machineID)
+	highCountHost := mostContainers(unitStates)
+	countOnMachine := containerCount(unitStates, highCountHost)
 	reschedule := countToReschedule(unitCount, machines, countOnMachine)
-	movingUnits := unitsToReschule(reschedule, unitStates, *machineID)
-	destroyingUnits := unitsToDestroy(reschedule, unitStates, *machineID)
+	movingUnits := unitsToReschule(reschedule, unitStates, highCountHost)
+	destroyingUnits := unitsToDestroy(reschedule, unitStates, highCountHost)
 
 	if *debug == true {
+		log.Println(highCountHost, "Host with highest count of containers")
 		log.Println(unitCount, "Containers")
 		log.Println(machines, "Fleet Nodes")
 		log.Println(countOnMachine, "Containers on node we want to cleanup")
-		log.Println(reschedule, "Number of containers we are going to reschedule away from", *machineID)
+		log.Println(reschedule, "Number of containers we are going to reschedule away from", highCountHost)
 		log.Println("Units that are going to be moved", movingUnits)
 		log.Println("Units that are going to be destroyed", destroyingUnits)
 	}
@@ -103,16 +106,6 @@ func main() {
 		appDeployData = append(appDeployData, deployInfo)
 	}
 
-	// TODO: @debug
-	// log.Printf("%+v", appDeployData)
-
-	// TODO: see below
-	// find the instance number of each unit name
-	// then modify the instance number used in the PUT url
-	// and modify the instance number in the "name" value of the unit file
-
-	// TODO: deploy unit
-	// deployUnits(host, appName, appVersion, unitFile string) bool {
 	for _, deployData := range appDeployData {
 		deployResults := deployUnits(hosts, deployData.AppName, deployData.Version, deployData.UnitFile)
 		if deployResults == true {

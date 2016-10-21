@@ -109,8 +109,6 @@ func destroyInstance(oldInstance string, hosts Hosts) {
 	// first we need to set it to inactive when we can destroy it
 	// this is because of a bug in fleet with systemd not executing
 	// execstoppost actions https://github.com/coreos/fleet/issues/1000
-	// url := "http://coreos." + deployInfo.Environ + ".crosschx.com:49153/fleet/v1/units/" + oldInstance
-	// temporary hard coded for now
 	url := "http://" + hosts.fleet + "/fleet/v1/units/" + oldInstance
 	// stop
 	fmt.Println("Stopping", oldInstance)
